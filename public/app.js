@@ -207,6 +207,8 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
 });
 
 document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
+  const btn = document.getElementById("btn-burn-cpu");
+  btn.disabled = true;
   setStatus(
     "Starting sustained duty-cycled CPU burn ~90s (~35% duty, short yields)… UI should stay responsive; watch Insights + MARS_DEMO_BURN_CPU"
   );
@@ -220,28 +222,56 @@ document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
         `Try Check API / Create order during the burn — should not 504.\n` +
         `${JSON.stringify(result, null, 2)}`
     );
+    setTimeout(() => {
+      btn.disabled = false;
+    }, (Number(result.duration_ms) || 90000) + 500);
   } catch (err) {
+    btn.disabled = false;
     setStatus(`CPU burn failed: ${err.message}`, true);
   }
 });
 
-document.getElementById("btn-burn-mem").addEventListener("click", async () => {
+const btnBurnMem = document.getElementById("btn-burn-mem");
+const btnBurnCpu = document.getElementById("btn-burn-cpu");
+
+async function refreshBurnButtonState() {
+  try {
+    const health = await api("/health");
+    const d = health.demo || {};
+    btnBurnMem.disabled = !!d.mem_burns_active;
+    btnBurnCpu.disabled = !!d.cpu_burns_active;
+    btnBurnMem.title = d.mem_burns_active
+      ? "Memory burn already active — wait (double-click OOMs 0.5GiB → exit 128 → 504s)"
+      : "Grow RSS to ~90% of instance memory limit and hold";
+  } catch {
+    /* ignore */
+  }
+}
+
+btnBurnMem.addEventListener("click", async () => {
+  btnBurnMem.disabled = true;
   setStatus(
-    "Allocating ~380MB and holding 60s… watch Insights memory + logs for MARS_DEMO_BURN_MEM (may pressure the 0.5GiB instance)"
+    "Growing RSS toward ~90% of instance memory limit, then holding 60s… do not double-click. Watch Insights + MARS_DEMO_BURN_MEM"
   );
   try {
     const result = await api("/demo/burn-memory", {
       method: "POST",
-      body: JSON.stringify({ mb: 380, hold_ms: 60000 }),
+      body: JSON.stringify({ target_pct: 0.9, hold_ms: 60000 }),
     });
     setStatus(
-      `Memory burn accepted (retained ~${result.mb}MB for ${result.hold_ms}ms)\n` +
-        `rss ${result.rss_mb_before} → ${result.rss_mb_after_alloc} MB\n` +
+      `Memory burn accepted → ~${Math.round((result.target_pct || 0.9) * 100)}% of ${result.limit_mb}MB (${result.limit_source})\n` +
+        `rss ${result.rss_mb_before} → ${result.rss_mb_after_alloc} MB (allocated ~${result.allocated_mb}MB), hold ${result.hold_ms}ms\n` +
         `${JSON.stringify(result, null, 2)}`
     );
+    setTimeout(refreshBurnButtonState, (Number(result.hold_ms) || 60000) + 500);
   } catch (err) {
-    setStatus(`Memory burn failed: ${err.message}`, true);
+    setStatus(
+      `Memory burn failed: ${err.message}${err.body ? "\n" + JSON.stringify(err.body, null, 2) : ""}`,
+      true
+    );
+    refreshBurnButtonState();
   }
 });
 
 refreshOrders().catch((err) => setStatus(`Initial load failed: ${err.message}`, true));
+refreshBurnButtonState();
