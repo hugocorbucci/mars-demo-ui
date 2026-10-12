@@ -1,4 +1,5 @@
 const API_BASE = "/api";
+const HOTPATH_EMAIL = "hotpath@example.com";
 const statusEl = document.getElementById("status");
 const ordersEl = document.getElementById("orders");
 
@@ -44,6 +45,23 @@ async function refreshOrders() {
     li.textContent = `#${order.id} · ${order.customer_email} · $${Number(order.amount_cents / 100).toFixed(2)} · ${order.status}`;
     ordersEl.appendChild(li);
   }
+}
+
+function summarizeSettled(results) {
+  const ok = results.filter((r) => r.status === "fulfilled");
+  const fail = results.filter((r) => r.status === "rejected");
+  const times = ok
+    .map((r) => r.value?.took_ms)
+    .filter((n) => typeof n === "number")
+    .sort((a, b) => a - b);
+  const p50 = times.length ? times[Math.floor(times.length * 0.5)] : null;
+  const p95 = times.length ? times[Math.floor(times.length * 0.95)] : null;
+  const statuses = {};
+  for (const r of fail) {
+    const code = r.reason?.status || "err";
+    statuses[code] = (statuses[code] || 0) + 1;
+  }
+  return { ok: ok.length, fail: fail.length, p50, p95, failStatuses: statuses };
 }
 
 document.getElementById("btn-health").addEventListener("click", async () => {
@@ -103,32 +121,84 @@ document.getElementById("btn-cancel").addEventListener("click", async () => {
 document.getElementById("btn-lookup").addEventListener("click", async () => {
   try {
     // Intentionally hits the unindexed email lookup path (latent bug scenario).
-    const email = "hotpath@example.com";
     const started = performance.now();
-    const result = await api(`/orders/by-email?email=${encodeURIComponent(email)}`);
+    const result = await api(`/orders/by-email?email=${encodeURIComponent(HOTPATH_EMAIL)}`);
     const ms = Math.round(performance.now() - started);
-    setStatus(`Lookup for ${email} completed in ${ms}ms\n${JSON.stringify(result, null, 2)}`);
+    setStatus(
+      `Lookup for ${HOTPATH_EMAIL} completed in ${ms}ms (server took_ms=${result.took_ms})\n${JSON.stringify(result, null, 2)}`
+    );
   } catch (err) {
     setStatus(`Lookup failed: ${err.message}`, true);
   }
 });
 
-document.getElementById("btn-stress").addEventListener("click", async () => {
-  setStatus("Running 20 create requests…");
+document.getElementById("btn-seed").addEventListener("click", async () => {
+  setStatus("Seeding ~80k bulk rows + hotpath rows (may take ~30–90s)…");
+  try {
+    const result = await api("/demo/seed-orders", {
+      method: "POST",
+      body: JSON.stringify({
+        confirm: "seed",
+        count: 80000,
+        hotpath_extra: 200,
+        hotpath_email: HOTPATH_EMAIL,
+      }),
+    });
+    setStatus(`Seed complete\n${JSON.stringify(result, null, 2)}`);
+  } catch (err) {
+    setStatus(`Seed failed: ${err.message}`, true);
+  }
+});
+
+document.getElementById("btn-hammer").addEventListener("click", async () => {
+  setStatus(`Hammering unindexed by-email (${HOTPATH_EMAIL}) ×40 concurrent…`);
+  const wall = performance.now();
   const results = await Promise.allSettled(
-    Array.from({ length: 20 }, (_, i) =>
+    Array.from({ length: 40 }, async () => {
+      const started = performance.now();
+      const body = await api(`/orders/by-email?email=${encodeURIComponent(HOTPATH_EMAIL)}`);
+      return { took_ms: body.took_ms ?? Math.round(performance.now() - started), body };
+    })
+  );
+  const summary = summarizeSettled(results);
+  const wallMs = Math.round(performance.now() - wall);
+  setStatus(
+    `Congestion hammer finished in ${wallMs}ms wall\n` +
+      `ok=${summary.ok} fail=${summary.fail} p50_server_ms=${summary.p50} p95_server_ms=${summary.p95}\n` +
+      `failStatuses=${JSON.stringify(summary.failStatuses)}\n` +
+      `(Missing index on customer_email — seed first if p95 is still tiny)`
+  );
+});
+
+document.getElementById("btn-stress").addEventListener("click", async () => {
+  setStatus("API load test: 40 concurrent creates (scale demo when DELAY/MAX_INFLIGHT set)…");
+  const wall = performance.now();
+  const results = await Promise.allSettled(
+    Array.from({ length: 40 }, (_, i) =>
       api("/orders", {
         method: "POST",
         body: JSON.stringify({
           customer_email: `load-${Date.now()}-${i}@example.com`,
           amount_cents: 500 + i * 10,
         }),
-      })
+      }).then((body) => ({ took_ms: null, body }))
     )
   );
-  const ok = results.filter((r) => r.status === "fulfilled").length;
-  const fail = results.length - ok;
-  setStatus(`Load test finished: ${ok} ok, ${fail} failed`);
+  const summary = summarizeSettled(results);
+  const wallMs = Math.round(performance.now() - wall);
+  let healthNote = "";
+  try {
+    const health = await api("/health");
+    healthNote = `\ndemo knobs: ${JSON.stringify(health.demo || {})}`;
+  } catch {
+    /* ignore */
+  }
+  setStatus(
+    `API load test finished in ${wallMs}ms wall\n` +
+      `ok=${summary.ok} fail=${summary.fail} failStatuses=${JSON.stringify(summary.failStatuses)}` +
+      healthNote +
+      `\nIf many 503 api saturated → scale api instance_count (playbook C)`
+  );
   try {
     await refreshOrders();
   } catch {
