@@ -2,6 +2,9 @@ const API_BASE = "/api";
 const statusEl = document.getElementById("status");
 const ordersEl = document.getElementById("orders");
 
+/** @type {{ id: string|number, customer_email: string, amount_cents: number, status: string }[]} */
+let recentOrders = [];
+
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
   statusEl.dataset.error = isError ? "true" : "false";
@@ -30,12 +33,13 @@ async function api(path, options) {
 
 async function refreshOrders() {
   const data = await api("/orders");
+  recentOrders = data.orders || [];
   ordersEl.innerHTML = "";
-  if (!data.orders?.length) {
+  if (!recentOrders.length) {
     ordersEl.innerHTML = "<li>No orders yet.</li>";
     return;
   }
-  for (const order of data.orders) {
+  for (const order of recentOrders) {
     const li = document.createElement("li");
     li.textContent = `#${order.id} · ${order.customer_email} · $${Number(order.amount_cents / 100).toFixed(2)} · ${order.status}`;
     ordersEl.appendChild(li);
@@ -65,6 +69,34 @@ document.getElementById("btn-create").addEventListener("click", async () => {
     await refreshOrders();
   } catch (err) {
     setStatus(`Create failed: ${err.message}`, true);
+  }
+});
+
+document.getElementById("btn-cancel").addEventListener("click", async () => {
+  try {
+    await refreshOrders();
+    const cancellable = recentOrders.find((o) => o.status !== "cancelled");
+    if (!cancellable) {
+      setStatus("No active orders to cancel. Create an order first.", true);
+      return;
+    }
+    const result = await api("/orders/cancel", {
+      method: "POST",
+      body: JSON.stringify({ id: Number(cancellable.id) }),
+    });
+    const order = result.order || result;
+    setStatus(
+      result.already_cancelled
+        ? `Order #${order.id} was already cancelled`
+        : `Cancelled order #${order.id} (${order.customer_email})`
+    );
+    await refreshOrders();
+  } catch (err) {
+    const body = err.body || {};
+    setStatus(
+      `Cancel failed (HTTP ${err.status || "?"}): ${err.message}\n${JSON.stringify(body, null, 2)}`,
+      true
+    );
   }
 });
 
