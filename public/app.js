@@ -206,4 +206,30 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
+  setStatus("Burning CPU ~5s (worker thread)… watch Insights CPU + logs for MARS_DEMO_BURN_CPU");
+  try {
+    const result = await api("/demo/burn-cpu", {
+      method: "POST",
+      body: JSON.stringify({ duration_ms: 5000, workers: 1 }),
+    });
+    setStatus(`CPU burn done\n${JSON.stringify(result, null, 2)}`);
+  } catch (err) {
+    setStatus(`CPU burn failed: ${err.message}`, true);
+  }
+});
+
+document.getElementById("btn-burn-mem").addEventListener("click", async () => {
+  setStatus("Holding ~96MB for 15s… watch Insights memory + logs for MARS_DEMO_BURN_MEM");
+  try {
+    const result = await api("/demo/burn-memory", {
+      method: "POST",
+      body: JSON.stringify({ mb: 96, hold_ms: 15000 }),
+    });
+    setStatus(`Memory burn done\n${JSON.stringify(result, null, 2)}`);
+  } catch (err) {
+    setStatus(`Memory burn failed: ${err.message}`, true);
+  }
+});
+
 refreshOrders().catch((err) => setStatus(`Initial load failed: ${err.message}`, true));
