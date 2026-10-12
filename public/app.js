@@ -105,3 +105,19 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
 });
 
 refreshOrders().catch((err) => setStatus(`Initial load failed: ${err.message}`, true));
+
+document.getElementById("btn-error-log").addEventListener("click", async () => {
+  try {
+    await api("/demo/error-log", {
+      method: "POST",
+      body: JSON.stringify({ customer_email: "investigate@example.com" }),
+    });
+    setStatus("Unexpected success from demo error endpoint", true);
+  } catch (err) {
+    const body = err.body || {};
+    setStatus(
+      `Demo error logged (HTTP ${err.status || "?"}).\nSearch App Platform logs for: MARS_DEMO_ERROR_LOG\n${JSON.stringify(body, null, 2)}`,
+      true
+    );
+  }
+});
