@@ -30,3 +30,10 @@ API calls go to `/api/*`. Locally that path only works when you reverse-proxy to
 - `public/app.js` — calls health, create order, slow email lookup, load test
 - `public/styles.css` — layout
 - `public/404.html` — static error document referenced by the app spec
+
+## App Platform fragment
+
+This repo owns its App Platform component config in [`.do/component.yaml`](.do/component.yaml).
+The parent [`mars-demo-app`](https://github.com/hugocorbucci/mars-demo-app) tracks this repo as a git submodule and merges fragments into `.do/app.yaml`.
+
+When `.do/**` changes on `main`, workflow `notify-parent-spec` dispatches the parent's `compose-app-spec` workflow (requires secret `PARENT_DISPATCH_TOKEN`).
