@@ -208,12 +208,12 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
 
 document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
   setStatus(
-    "Starting sustained duty-cycled CPU burn ~90s (busy/yield)… UI should stay responsive; watch Insights + MARS_DEMO_BURN_CPU"
+    "Starting sustained duty-cycled CPU burn ~90s (~35% duty, short yields)… UI should stay responsive; watch Insights + MARS_DEMO_BURN_CPU"
   );
   try {
     const result = await api("/demo/burn-cpu", {
       method: "POST",
-      body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.55, slice_ms: 20 }),
+      body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.35, slice_ms: 12 }),
     });
     setStatus(
       `CPU burn accepted (duty-cycled ~${result.duration_ms}ms @ ${result.duty_cycle})\n` +
