@@ -213,7 +213,7 @@ document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
   try {
     const result = await api("/demo/burn-cpu", {
       method: "POST",
-      body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.7, slice_ms: 40 }),
+      body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.7, slice_ms: 50 }),
     });
     setStatus(
       `CPU burn accepted (duty-cycled ~${result.duration_ms}ms @ ${result.duty_cycle})\n` +
