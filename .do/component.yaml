@@ -3,7 +3,7 @@
 static_sites:
   - name: web
     github:
-      repo: hugocorbucci/mars-demo-ui
+      repo: mars-demo-app/mars-demo-ui
       branch: main
       deploy_on_push: true
     environment_slug: html

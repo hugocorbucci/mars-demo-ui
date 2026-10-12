@@ -17,7 +17,7 @@ jobs:
       - name: Dispatch parent compose-app-spec
         env:
           # Same-owner cross-repo dispatch needs a PAT with repo + workflow
-          # scope on hugocorbucci/mars-demo-app. Add as PARENT_DISPATCH_TOKEN.
+          # scope on mars-demo-app/mars-demo-app. Add as PARENT_DISPATCH_TOKEN.
           GH_TOKEN: ${{ secrets.PARENT_DISPATCH_TOKEN }}
         run: |
           if [ -z "${GH_TOKEN}" ]; then
@@ -25,5 +25,5 @@ jobs:
             exit 0
           fi
           gh workflow run compose-app-spec.yml \
-            --repo hugocorbucci/mars-demo-app \
+            --repo mars-demo-app/mars-demo-app \
             -f reason="mars-demo-ui@${GITHUB_SHA}"
