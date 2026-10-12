@@ -207,26 +207,36 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
 });
 
 document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
-  setStatus("Burning CPU ~5s (worker thread)… watch Insights CPU + logs for MARS_DEMO_BURN_CPU");
+  setStatus(
+    "Starting background CPU burn 60s × 4 workers… watch Insights CPU + logs for MARS_DEMO_BURN_CPU"
+  );
   try {
     const result = await api("/demo/burn-cpu", {
       method: "POST",
-      body: JSON.stringify({ duration_ms: 5000, workers: 1 }),
+      body: JSON.stringify({ duration_ms: 60000, workers: 4 }),
     });
-    setStatus(`CPU burn done\n${JSON.stringify(result, null, 2)}`);
+    setStatus(
+      `CPU burn accepted (runs in background ~${result.duration_ms}ms)\n${JSON.stringify(result, null, 2)}`
+    );
   } catch (err) {
     setStatus(`CPU burn failed: ${err.message}`, true);
   }
 });
 
 document.getElementById("btn-burn-mem").addEventListener("click", async () => {
-  setStatus("Holding ~96MB for 15s… watch Insights memory + logs for MARS_DEMO_BURN_MEM");
+  setStatus(
+    "Allocating ~380MB and holding 60s… watch Insights memory + logs for MARS_DEMO_BURN_MEM (may pressure the 0.5GiB instance)"
+  );
   try {
     const result = await api("/demo/burn-memory", {
       method: "POST",
-      body: JSON.stringify({ mb: 96, hold_ms: 15000 }),
+      body: JSON.stringify({ mb: 380, hold_ms: 60000 }),
     });
-    setStatus(`Memory burn done\n${JSON.stringify(result, null, 2)}`);
+    setStatus(
+      `Memory burn accepted (retained ~${result.mb}MB for ${result.hold_ms}ms)\n` +
+        `rss ${result.rss_mb_before} → ${result.rss_mb_after_alloc} MB\n` +
+        `${JSON.stringify(result, null, 2)}`
+    );
   } catch (err) {
     setStatus(`Memory burn failed: ${err.message}`, true);
   }
