@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mars Demo Shop</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <p class="brand">Mars Demo Shop</p>
+        <h1>Orders that exercise App Platform + MARS</h1>
+        <p class="lede">
+          Static UI on App Platform talking to a Node API and managed Postgres.
+          Use the actions below to create healthy traffic or trigger demo failure paths.
+        </p>
+        <div class="actions">
+          <button type="button" id="btn-health">Check API</button>
+          <button type="button" id="btn-create" class="primary">Create order</button>
+          <button type="button" id="btn-lookup">Slow lookup</button>
+          <button type="button" id="btn-stress">Load test (×20)</button>
+        </div>
+      </header>
+
+      <section class="panel" aria-live="polite">
+        <h2>Status</h2>
+        <pre id="status">Ready. Click an action.</pre>
+      </section>
+
+      <section class="panel">
+        <h2>Recent orders</h2>
+        <ul id="orders"></ul>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
