@@ -208,15 +208,17 @@ document.getElementById("btn-stress").addEventListener("click", async () => {
 
 document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
   setStatus(
-    "Starting background CPU burn 60s × 4 workers… watch Insights CPU + logs for MARS_DEMO_BURN_CPU"
+    "Starting sustained duty-cycled CPU burn ~90s (busy/yield)… UI should stay responsive; watch Insights + MARS_DEMO_BURN_CPU"
   );
   try {
     const result = await api("/demo/burn-cpu", {
       method: "POST",
-      body: JSON.stringify({ duration_ms: 60000, workers: 4 }),
+      body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.7, slice_ms: 40 }),
     });
     setStatus(
-      `CPU burn accepted (runs in background ~${result.duration_ms}ms)\n${JSON.stringify(result, null, 2)}`
+      `CPU burn accepted (duty-cycled ~${result.duration_ms}ms @ ${result.duty_cycle})\n` +
+        `Try Check API / Create order during the burn — should not 504.\n` +
+        `${JSON.stringify(result, null, 2)}`
     );
   } catch (err) {
     setStatus(`CPU burn failed: ${err.message}`, true);
