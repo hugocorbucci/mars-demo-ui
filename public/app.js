@@ -210,12 +210,12 @@ document.getElementById("btn-burn-cpu").addEventListener("click", async () => {
   const btn = document.getElementById("btn-burn-cpu");
   btn.disabled = true;
   setStatus(
-    "Starting sustained duty-cycled CPU burn ~90s (~35% duty, short yields)… UI should stay responsive; watch Insights + MARS_DEMO_BURN_CPU"
+    "Starting sustained CPU burn ~90s at ~95% duty (short yields)… UI should stay responsive; watch Insights + MARS_DEMO_BURN_CPU"
   );
   try {
     const result = await api("/demo/burn-cpu", {
       method: "POST",
-      body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.35, slice_ms: 12 }),
+      body: JSON.stringify({ duration_ms: 90000, duty_cycle: 0.95, slice_ms: 20 }),
     });
     setStatus(
       `CPU burn accepted (duty-cycled ~${result.duration_ms}ms @ ${result.duty_cycle})\n` +
@@ -242,7 +242,7 @@ async function refreshBurnButtonState() {
     btnBurnCpu.disabled = !!d.cpu_burns_active;
     btnBurnMem.title = d.mem_burns_active
       ? "Memory burn already active — wait (double-click OOMs 0.5GiB → exit 128 → 504s)"
-      : "Grow RSS to ~90% of instance memory limit and hold";
+      : "Grow RSS to ~95% of instance memory limit and hold";
   } catch {
     /* ignore */
   }
@@ -251,15 +251,15 @@ async function refreshBurnButtonState() {
 btnBurnMem.addEventListener("click", async () => {
   btnBurnMem.disabled = true;
   setStatus(
-    "Growing RSS toward ~90% of instance memory limit, then holding 60s… do not double-click. Watch Insights + MARS_DEMO_BURN_MEM"
+    "Growing RSS toward ~95% of instance memory limit, then holding 60s… do not double-click. Watch Insights + MARS_DEMO_BURN_MEM"
   );
   try {
     const result = await api("/demo/burn-memory", {
       method: "POST",
-      body: JSON.stringify({ target_pct: 0.9, hold_ms: 60000 }),
+      body: JSON.stringify({ target_pct: 0.95, hold_ms: 60000 }),
     });
     setStatus(
-      `Memory burn accepted → ~${Math.round((result.target_pct || 0.9) * 100)}% of ${result.limit_mb}MB (${result.limit_source})\n` +
+      `Memory burn accepted → ~${Math.round((result.target_pct || 0.95) * 100)}% of ${result.limit_mb}MB (${result.limit_source})\n` +
         `rss ${result.rss_mb_before} → ${result.rss_mb_after_alloc} MB (allocated ~${result.allocated_mb}MB), hold ${result.hold_ms}ms\n` +
         `${JSON.stringify(result, null, 2)}`
     );
